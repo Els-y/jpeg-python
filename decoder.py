@@ -154,6 +154,20 @@ class JpegDecoder(object):
 
     def postprocess(self, ycbcr):
         ycbcr = (ycbcr + 128).astype(np.uint8)
-        image = Image.fromarray(ycbcr, 'YCbCr')
-        image = image.convert('RGB')
+        rgb = self.ycbcr2rgb(ycbcr)
+        image = Image.fromarray(rgb, 'RGB')
         return image
+
+
+    def ycbcr2rgb(self, ycbcr):
+        # R  = Y +                       + (Cr - 128) *  1.40200
+        # G  = Y + (Cb - 128) * -0.34414 + (Cr - 128) * -0.71414
+        # B  = Y + (Cb - 128) *  1.77200
+        matrix = np.array([[1.0, 0.0, 1.40200],
+                           [1.0, -0.34414, -0.71414],
+                           [1.0, 1.77200, 0.0]])
+        ycbcr = np.array(ycbcr, dtype=np.float)
+        ycbcr[:, :, 1:] -= 128
+        rgb = np.dot(ycbcr, matrix.T)
+        rgb = np.clip(rgb, a_min=0, a_max=255)
+        return rgb.astype(np.uint8)

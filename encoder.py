@@ -37,8 +37,22 @@ class JpegEncoder(object):
 
     def preprocess(self, image_path):
         image = Image.open(image_path)
-        ycbcr = image.convert('YCbCr')
-        return np.array(ycbcr) - 128
+        image = np.array(image)
+        ycbcr = self.rgb2ycbcr(image) - 128
+        return ycbcr
+
+
+    def rgb2ycbcr(self, rgb):
+        # Y  = R *  0.29900 + G *  0.58700 + B *  0.11400
+        # Cb = R * -0.16874 + G * -0.33126 + B *  0.50000 + 128
+        # Cr = R *  0.50000 + G * -0.41869 + B * -0.08131 + 128
+        matrix = np.array([[0.29900, 0.58700, 0.11400],
+                           [-0.16784, -0.33126, 0.50000],
+                           [0.50000, -0.41869, -0.08131]])
+        ycbcr = np.dot(rgb, matrix.T)
+        ycbcr[:, :, 1:] += 128
+        ycbcr = np.clip(ycbcr, a_min=0, a_max=255)
+        return ycbcr.astype(np.uint8)
 
 
     def dct(self, block):
